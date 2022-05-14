@@ -22,5 +22,11 @@
     "typescript": "^4.5.4",
     "vite": "^2.9.9"
   },
-  "packageManager": "yarn@3.2.1"
+  "packageManager": "yarn@3.2.1",
+  "dependencies": {
+    "@comunica/query-sparql": "^2.2.1",
+    "graphy": "^4.3.4",
+    "marked": "^4.0.15",
+    "random-words": "^1.1.2"
+  }
 }
