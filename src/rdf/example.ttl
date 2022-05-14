@@ -3,8 +3,11 @@
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
-ex:msg1 rdf:type ex:msg; 
-	ex:to "bob";
+:Person a rdfs:Class ;
+		rdf:label "Person" .
+
+ex:Omes_Baltes a :Person; 
+	rdf:label "Omes Baltes";
 	ex:from "alice" ;
 	ex:subj "alice to bob 1";
 	.
