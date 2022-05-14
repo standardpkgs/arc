@@ -20,20 +20,9 @@ import clownface from "clownface"
 // import rdfetch from "@rdfjs/fetch"
 // import namespace from "@rdfjs/namespace"
 
-import fetch from '@rdfjs/fetch'
+// import fetch from '@rdfjs/fetch'
 
 const label = 'http://www.w3.org/2000/01/rdf-schema#label'
-
-fetch('http://www.w3.org/2000/01/rdf-schema')
-  .then(res => res.dataset())
-  .then(dataset => {
-    for (const quad of dataset) {
-      if (quad.predicate.value === label) {
-        console.log(`${quad.subject.value}: ${quad.object.value}`)
-      }
-    }
-  })
-  .catch(err => console.error(err))
 
 export const sparql: Sparql = new Comunica.QueryEngine()
 export const store = new N3.Store()
@@ -42,10 +31,6 @@ const { namedNode: node, literal, quad } = N3.DataFactory
 
 main()
 
-const graph = clownface({ store })
-const omes = graph.namedNode("http://example.org/Omes")
-const omesOut = omes.
-console.log(omes)
 //==============================================================================
 //#region I/O
 
