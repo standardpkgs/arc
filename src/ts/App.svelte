@@ -1,4 +1,4 @@
-<script lang="ts">
+<script>
   import Toolbar from "./panels/Toolbar.svelte";
   import Sidebar from "./panels/Sidebar.svelte";
   import Editor from "./panels/Editor.svelte";
