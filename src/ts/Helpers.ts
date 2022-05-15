@@ -11,7 +11,7 @@ export function color(): string {
     "bg-amber-400/50",
     "bg-yellow-400/50",
     "bg-lime-400/50",
-    "bg-green-400/50",
+    "bg-green-400",
     "bg-emerald-400/50",
     "bg-teal-400/50",
     "bg-cyan-400/50",
