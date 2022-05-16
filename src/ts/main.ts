@@ -36,10 +36,10 @@ export let favorites;
 let urls;
 
 (async function main() {
-  url =
-    prompt("please enter a RDF Resource URI") ??
-    "https://www.rubensworks.net/#me";
-    // url = "https://www.rubensworks.net/#me";
+  // url =
+  //   prompt("please enter a RDF Resource URI") ??
+  //   "https://www.rubensworks.net/#me";
+  url = "https://www.rubensworks.net/#me";
   const { data: quads1 } = await rdfDereferencer.dereference(
     url
     // "https://dbpedia.org/page/Inception"
