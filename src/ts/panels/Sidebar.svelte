@@ -1,23 +1,24 @@
 <script>
   import { color, rw } from "../Helpers";
-  import { favorites } from "../main";
 
   export let propertys;
   export let classes;
-  export let data;
   export let dataset;
   export let currentNode;
+  export let onGraphSelect
+  export let graph;
+  export let favs;
 </script>
 
 <aside
   id="Sidebar"
   class="bg-neutral-200 px-5 py-5 flex flex-col gap-5 col-span-15 row-span-full order-2 rounded-md overflow-auto">
   <header>
-    <label class="inline-block" for="test">Graph: &nbsp;</label>
-    <select name="test" id="">
-      <option value="default">default</option>
-      <option value="demos">demos</option>
-      <option value="cooking">cooking</option>
+    <label class="inline-block" for="graph-select">Graph: &nbsp;</label>
+    <select name="graph-select" id="" bind:value={graph} on:change={onGraphSelect}>
+      <option value="harry potter">harry potter</option>
+      <option value="rubenworks">rubenworks</option>
+      <option value="+ enter url">+ enter url</option>
     </select>
   </header>
   <details id="Ontologies">
@@ -40,7 +41,7 @@
   <details id="Favorites" open>
     <summary class="pb-1 cursor-pointer text-xl">⭐️ Favorites</summary>
     <ul class="pl-3 list-inside list-disc">
-      {#each favorites as w}
+      {#each favs as w}
         <li class="cursor-pointer" on:click={() => (currentNode = w)}>
           {w.value.split("/").at(-1)}
         </li>

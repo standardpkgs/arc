@@ -1,17 +1,28 @@
 <script>
   import { color, rw } from "../Helpers";
   import { marked } from "marked";
-  import { addDataFromUri, foaf, node, q, rdf, rdfs, schema, x } from "../main";
+  import { foaf, node, q, rdf, rdfs, schema, x } from "../main";
   import { onMount } from "svelte";
   import MdChild from "../components/MdChild.svelte";
   import RdfDereferencer from "rdf-dereference";
   import { storeStream } from "rdf-store-stream";
-import Fieldset from "../components/Fieldset.svelte";
+  import Fieldset from "../components/Fieldset.svelte";
 
   export let currentNode;
-  export let data;
   export let dataset;
+  export let nestLevel = 0;
+  export let changeNode;
+  let maxNest = 0;
   let title;
+  $: {
+    maxNest = (() => {
+      if ([...dataset]?.length > 500) return 1;
+      if ([...dataset]?.length < 400) return 2;
+      if ([...dataset]?.length < 300) return 3;
+      if ([...dataset]?.length < 200) return 4;
+      if ([...dataset]?.length < 100) return 5;
+    })();
+  }
 
   let isProperty, isClass, isEntity;
 
@@ -23,15 +34,7 @@ import Fieldset from "../components/Fieldset.svelte";
   let subsAndObjs, propSubs, propObjs;
   let classInstances;
 
-  function changeNode(node) {
-    currentNode = node;
-    // addDataFromUri(
-    //   "https://dbpedia.org/page/" + node.value.split(/\/|#/).at(-1)
-    // ).then(() => (currentNode = currentNode));
-  }
-
   $: {
-    console.log(currentNode);
     title =
       [...dataset?.match(currentNode, rdf.label, null)]?.[0]?.object.value ??
       currentNode.value.split(/\/|#/).at(-1);
@@ -61,7 +64,6 @@ import Fieldset from "../components/Fieldset.svelte";
 
     markdown =
       [...dataset.match(currentNode, x.md, null)]?.[0]?.object ?? node("test");
-    console.log("markdown", markdown);
 
     subsAndObjs = [...dataset?.match(null, currentNode, null)];
     isProperty = subsAndObjs?.length;
@@ -73,10 +75,7 @@ import Fieldset from "../components/Fieldset.svelte";
         node
       );
     }
-
-    console.log("subs and objs", propSubs, propObjs);
   }
-  console.log("markdown", markdown);
 </script>
 
 <main
@@ -97,6 +96,7 @@ import Fieldset from "../components/Fieldset.svelte";
     <ul class="px-0 flex justify-center flex-wrap gap-1">
       {#each classes as w, i}
         <li
+          on:click={() => changeNode(w.object)}
           class={`rounded-xl px-2 bg-red-300 cursor-pointer inline-block shadow-md capitalize`}>
           {w.object.value.split(/\/|#/).at(-1)}
         </li>
@@ -112,7 +112,7 @@ import Fieldset from "../components/Fieldset.svelte";
         + new Class
       </li>
     </ul>
-    <Fieldset legend="Properties">
+    <Fieldset legend="Attributes">
       <ul class="mx-0.5 flex flex-col gap-1">
         {#each propertys as w, i}
           <li class="flex justify-between">
@@ -142,19 +142,32 @@ import Fieldset from "../components/Fieldset.svelte";
       <ul class="mx-0.5 flex flex-col gap-1">
         {#each relations as w, i}
           <li class="flex justify-between">
-            <span>
+            <span class="flex align-top">
               <span
                 on:click={() => changeNode(w.predicate)}
                 class={`px-1 mr-2 bg-sky-200 cursor-pointer before:content-["-"] after:content-["->"]`}>
                 {w.predicate.value.split(/\/|#/).at(-1)}
               </span>
-              <span
-                class="cursor-pointer bg-green-300/75"
-                on:click={() => changeNode(w.object)}
-                >{w.object.value.split(/\/|#/).at(-1)}</span>
+              <span>
+                <details class="inline">
+                  <summary>
+                    <span
+                      class="cursor-pointer bg-green-300/75"
+                      on:click={() => changeNode(w.object)}
+                      >{w.object.value.split(/\/|#/).at(-1)}</span>
+                  </summary>
+                  {#if nestLevel < maxNest}
+                    <svelte:self
+                      {...{
+                        currentNode: w.object,
+                        dataset,
+                        nestLevel: ++nestLevel,
+                      }} />
+                  {/if}
+                </details>
+              </span>
             </span>
             <select name="" id="">
-              <option value="Node" default>Node</option>
               {#each allClasses as quad}
                 <option value={quad.value.split(/\/|#/).at(-1)} default
                   >{quad.value.split(/\/|#/).at(-1)}</option>
@@ -247,4 +260,3 @@ import Fieldset from "../components/Fieldset.svelte";
     </Fieldset>
   </div>
 </main>
-;

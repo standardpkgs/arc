@@ -35,101 +35,127 @@ export let startNode;
 export let favorites;
 let url;
 
-(async function main() {
-  // url =
-  //   prompt("please enter a RDF Resource URI") ??
-  //   "https://www.rubensworks.net/#me";
-  url = "https://www.rubensworks.net/#me";
-  const { data: quads1 } = await rdfDereferencer.dereference(
-    url
-    // "https://dbpedia.org/page/Inception"
-    // "https://www.rubensworks.net/#me"
-    // "https://zazuko.github.io/tbbt-ld/dist/tbbt.nq"
-  );
-  // urlData = await (await fetch("https://www.rubensworks.net/#me")).dataset();
-  // console.log("rdf-schema", [...urlData]);
-  const urlData = await storeStream(quads1);
-  console.log("test", urlData);
+const app = new App({
+  target: document.getElementById("app"),
+  props: {},
+});
 
-  dataset = new N3.Store();
+window.app = app;
 
-  const quads = [
-    q(x.Harry, a, x.Person),
-    q(x.Harry, a, x.Wizard),
-    q(x.Harry, schema.givenName, l("Harry Potter")),
-    q(x.Harry, x.mother, x.Lily),
-    q(x.Harry, x.father, x.James),
-    q(x.Harry, x.hobby, x.Quidditch),
-    q(x.Harry, x.pet, x.Hedwig),
-    q(x.Harry, x.eyeColor, l("green")),
-    q(x.Harry, x.hairColor, l("brown")),
-    q(x.Harry, x.knows, x.Hermione),
-    q(x.Harry, x.knows, x.Ron),
-    q(x.Harry, x.md, x.root),
-    q(x.root, x.mdContent, l("This. is. Markdown!!!")),
-    q(x.root, x.mdChild, x.md1),
-    q(x.md1, x.mdContent, l("Wands Harry has used")),
-    q(x.md1, x.mdChild, x.md11),
-    q(x.md1, x.mdChild, x.md12),
-    q(x.md1, x.mdChild, x.md13),
-    q(x.md11, x.mdContent, l("His Own")),
-    q(x.md12, x.mdContent, l("Malfoys")),
-    q(x.md13, x.mdContent, l("Dumbledores")),
-    q(x.root, x.mdChild, x.md2),
-    q(x.md2, x.mdContent, l("Harrys best Friend is Ron")),
-    q(x.Hermione, a, x.Wizard),
-    q(x.Hermione, schema.givenName, l("Hermione Granger")),
+export async function changeGraph(graph) {
+  if (graph == "harry potter") {
+    const dataset = new N3.Store();
 
-    q(x.Hermione, a, x.Person),
-    q(x.Hermione, x.knows, x.Hermione),
-    q(x.Hermione, x.knows, x.Harry),
-    q(x.Hermione, x.hobby, x.Reading),
-    q(x.Hermione, x.eyeColor, l("brown")),
-    q(x.Hermione, x.hairColor, l("brown")),
-    q(x.Ron, schema.givenName, l("Ronald Weasley")),
+    function createClass(node) {
+      return [q(node, rdf.type, rdfs.Class), nanode(node)].flat();
+    }
+    function createRelation(node) {
+      return [
+        q(node, rdf.type, rdf.Property),
+        q(node, rdfs.domain, x.Node),
+        q(node, rdfs.range, x.Node),
+      ];
+    }
+    function nanode(node) {
+      return [q(node, rdf.type, x.Node)];
+    }
+    function type(s, o) {
+      return [q(s, rdf.type, o), nanode(s), createClass(o)].flat();
+    }
+    function triple(s, p, o) {
+      return [q(s, p, o), nanode(s), createRelation(p), nanode(o)].flat();
+    }
 
-    q(x.Ron, x.knows, x.Hermione),
-    q(x.Ron, x.knows, x.Harry),
-    q(x.Ron, a, x.Wizard),
-    q(x.Ron, a, x.Person),
-    q(x.Ron, x.hobby, x.Reading),
-    q(x.Ron, x.eyeColor, l("blue")),
-    q(x.Ron, x.hairColor, l("red")),
-  ];
+    const nodes = [
+      nanode(x.Harry),
+      nanode(x.Ronald),
+      nanode(x.Hermione),
+      nanode(x.Dobby),
+      nanode(x.Draco),
+      nanode(x.Albus),
+      nanode(x.Severus),
+      nanode(x.Lily),
+      nanode(x.James),
+      nanode(x.Petunia),
+      nanode(x.Dudley),
+      nanode(x.Vernon),
+      nanode(x.Hedwig),
+      nanode(x.Voldemort),
+    ].flat();
 
-  let potter = true;
-  potter = false;
-  if (potter) {
-    dataset.addQuads(quads);
-    startNode = x.Harry;
-    favorites = [x.Harry, x.Ron, x.Hermione];
-  } else {
+    const types = [
+      type(x.Dobby, x.Creature),
+      type(x.Dobby, x.Houseelf),
+      type(x.Hedwig, x.Animal),
+
+      type(x.Petunia, x.Person),
+      type(x.Dudley, x.Person),
+      type(x.Vernon, x.Person),
+      type(x.Petunia, x.Muggle),
+      type(x.Dudley, x.Muggle),
+      type(x.Vernon, x.Muggle),
+
+      type(x.Harry, x.Person),
+      type(x.Ronald, x.Person),
+      type(x.Hermione, x.Person),
+      type(x.Draco, x.Person),
+      type(x.Albus, x.Person),
+      type(x.Severus, x.Person),
+      type(x.Lily, x.Person),
+      type(x.James, x.Person),
+      type(x.Voldemort, x.Person),
+
+      type(x.Harry, x.Wizard),
+      type(x.Ronald, x.Wizard),
+      type(x.Hermione, x.Wizard),
+      type(x.Draco, x.Wizard),
+      type(x.Albus, x.Wizard),
+      type(x.Severus, x.Wizard),
+      type(x.Lily, x.Wizard),
+      type(x.James, x.Wizard),
+      type(x.Voldemort, x.Wizard),
+
+      type(x.Albus, x.Teacher),
+      type(x.Severus, x.Teacher),
+
+
+    ].flat();
+
+    const triples = [
+
+    ].flat();
+
+    // console.error(nodes)
+
+    dataset.addQuads([nodes, types, triples].flat());
+    const startNode = x.Harry;
+    const favs = [x.Harry, x.Ronald, x.Hermione];
+    return [dataset, startNode, favs];
+  }
+  if (graph == "rubenworks") {
+    url = "https://www.rubensworks.net/#me";
+    const { data } = await rdfDereferencer.dereference(
+      url
+      // "https://dbpedia.org/page/Inception"
+      // "https://www.rubensworks.net/#me"
+      // "https://zazuko.github.io/tbbt-ld/dist/tbbt.nq"
+    );
+    const urlData = await storeStream(data);
+    const startNode = node("https://www.rubensworks.net/#me");
+    const dataset = new N3.Store();
     dataset.addQuads([...urlData]);
-    // startNode = node("http://localhost:8080/data/person/amy-farrah-fowler");
-    favorites = [
-      node("http://localhost:8080/data/person/amy-farrah-fowler"),
-      node("http://localhost:8080/data/person/penny"),
-    ];
-    startNode =
-      url == "https://www.rubensworks.net/#me"
-        ? node("https://www.rubensworks.net/#me")
-        : [...dataset.match(null, null, null)][0].subject;
+    return [dataset, startNode, [startNode]];
   }
-
-  window.dataset = dataset;
-
-  const app = new App({
-    target: document.getElementById("app"),
-  });
-})();
-
-export async function addDataFromUri(uri) {
-  try {
-    const { data } = await rdfDereferencer.dereference(uri);
-    const uriData = await storeStream(data);
-    console.warn("successfully loaded", [...uriData]);
-    dataset.addQuads([...uriData]);
-  } catch (error) {
-    console.error(error);
+  if (graph == "+ enter url") {
+    url =
+      prompt("please enter a RDF Resource URI") ??
+      "https://www.rubensworks.net/#me";
+    const { data } = await rdfDereferencer.dereference(url);
+    const urlData = await storeStream(data);
+    const startNode = rdfs.Class;
+    const dataset = new N3.Store();
+    dataset.addQuads([...urlData]);
+    return [dataset, startNode, [startNode]];
   }
+  return null;
 }
