@@ -33,7 +33,7 @@ export let urlData;
 export let dataset;
 export let startNode;
 export let favorites;
-let urls;
+let url;
 
 (async function main() {
   // url =
