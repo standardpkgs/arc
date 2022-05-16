@@ -10,6 +10,7 @@ import fetch from "@rdfjs/fetch";
 
 import { storeStream } from "rdf-store-stream";
 import rdfDereferencer from "rdf-dereference";
+let hi;
 
 export const rdf = namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
 export const rdfs = namespace("http://www.w3.org/2000/01/rdf-schema#");
@@ -32,11 +33,13 @@ export let urlData;
 export let dataset;
 export let startNode;
 export let favorites;
-let url
+let urls;
 
 (async function main() {
-
-  url = prompt("please enter a RDF Resource URI") ?? "https://www.rubensworks.net/#me"
+  url =
+    prompt("please enter a RDF Resource URI") ??
+    "https://www.rubensworks.net/#me";
+    // url = "https://www.rubensworks.net/#me";
   const { data: quads1 } = await rdfDereferencer.dereference(
     url
     // "https://dbpedia.org/page/Inception"
@@ -45,9 +48,8 @@ let url
   );
   // urlData = await (await fetch("https://www.rubensworks.net/#me")).dataset();
   // console.log("rdf-schema", [...urlData]);
-  const urlData = await storeStream(quads1)
+  const urlData = await storeStream(quads1);
   console.log("test", urlData);
-  
 
   dataset = new N3.Store();
 
@@ -99,7 +101,7 @@ let url
   potter = false;
   if (potter) {
     dataset.addQuads(quads);
-    // startNode = x.Harry;
+    startNode = x.Harry;
     favorites = [x.Harry, x.Ron, x.Hermione];
   } else {
     dataset.addQuads([...urlData]);
@@ -108,12 +110,26 @@ let url
       node("http://localhost:8080/data/person/amy-farrah-fowler"),
       node("http://localhost:8080/data/person/penny"),
     ];
+    startNode =
+      url == "https://www.rubensworks.net/#me"
+        ? node("https://www.rubensworks.net/#me")
+        : [...dataset.match(null, null, null)][0].subject;
   }
-  
-  startNode = url == "https://www.rubensworks.net/#me" ? node("https://www.rubensworks.net/#me") : [...dataset.match(null,null,null)][0].subject
+
   window.dataset = dataset;
 
   const app = new App({
     target: document.getElementById("app"),
   });
 })();
+
+export async function addDataFromUri(uri) {
+  try {
+    const { data } = await rdfDereferencer.dereference(uri);
+    const uriData = await storeStream(data);
+    console.warn("successfully loaded", [...uriData]);
+    dataset.addQuads([...uriData]);
+  } catch (error) {
+    console.error(error);
+  }
+}

@@ -1,9 +1,12 @@
 <script>
   import { color, rw } from "../Helpers";
   import { marked } from "marked";
-  import { foaf, node, q, rdf, rdfs, schema, x } from "../main";
+  import { addDataFromUri, foaf, node, q, rdf, rdfs, schema, x } from "../main";
   import { onMount } from "svelte";
   import MdChild from "../components/MdChild.svelte";
+  import RdfDereferencer from "rdf-dereference";
+  import { storeStream } from "rdf-store-stream";
+import Fieldset from "../components/Fieldset.svelte";
 
   export let currentNode;
   export let data;
@@ -15,15 +18,22 @@
   let classes;
   let allClasses;
   let propertys;
-  let relations;
+  let relations = [];
   let markdown = node("empty");
   let subsAndObjs, propSubs, propObjs;
   let classInstances;
 
+  function changeNode(node) {
+    currentNode = node;
+    // addDataFromUri(
+    //   "https://dbpedia.org/page/" + node.value.split(/\/|#/).at(-1)
+    // ).then(() => (currentNode = currentNode));
+  }
+
   $: {
     console.log(currentNode);
     title =
-      [...dataset?.match(currentNode, rdfs.label, null)]?.[0]?.object.value ??
+      [...dataset?.match(currentNode, rdf.label, null)]?.[0]?.object.value ??
       currentNode.value.split(/\/|#/).at(-1);
     classes = [...dataset.match(currentNode, rdf.type, null)];
     allClasses = [
@@ -34,16 +44,21 @@
       ),
     ].map(node);
     isClass = allClasses.some((cl) => cl.equals(currentNode));
-    classInstances = [...dataset.match(null,rdf.type,currentNode)]
-    console.error("is class? ", isClass);
-    propertys = data.filter(
-      (quad) =>
-        quad.subject.equals(currentNode) && quad.object.termType == "Literal"
+    classInstances = [
+      ...new Set(
+        [...dataset.match(null, rdf.type, currentNode)].map(
+          (quad) => quad.subject.value
+        )
+      ),
+    ].map(node);
+    propertys = [...dataset.match(currentNode, null, null)].filter(
+      (quad) => quad.object.termType == "Literal"
     );
-    relations = data.filter(
-      (quad) =>
-        quad.subject.equals(currentNode) && quad.object.termType == "NamedNode"
+
+    relations = [...dataset.match(currentNode, null, null)].filter(
+      (quad) => quad.object.termType == "NamedNode"
     );
+
     markdown =
       [...dataset.match(currentNode, x.md, null)]?.[0]?.object ?? node("test");
     console.log("markdown", markdown);
@@ -72,6 +87,7 @@
         <span
           class:bg-red-300={isClass}
           class:bg-sky-200={isProperty}
+          class={isProperty ? `before:content-["-"] after:content-["->"]` : ""}
           class:bg-green-300={!isClass && !isProperty}>{title}</span>
       </h2>
       <div class="text-gray-400">
@@ -96,14 +112,13 @@
         + new Class
       </li>
     </ul>
-    <fieldset class="border-2 border-neutral-700 rounded-lg py-2 px-3">
-      <legend class="px-0.5">Properties</legend>
+    <Fieldset legend="Properties">
       <ul class="mx-0.5 flex flex-col gap-1">
         {#each propertys as w, i}
           <li class="flex justify-between">
             <span>
               <span
-                on:click={() => (currentNode = w.predicate)}
+                on:click={() => changeNode(w.predicate)}
                 class={`px-1 mr-2 bg-orange-200 cursor-pointer before:content-["-"] after:content-["->"]`}>
                 {w.predicate.value.split(/\/|#/).at(-1)}
               </span>
@@ -122,21 +137,20 @@
           </span>
         </li>
       </ul>
-    </fieldset>
-    <fieldset class="border-2 border-neutral-700 rounded-lg py-2 px-3">
-      <legend class="px-0.5">Relations</legend>
+    </Fieldset>
+    <Fieldset legend="Relations">
       <ul class="mx-0.5 flex flex-col gap-1">
         {#each relations as w, i}
           <li class="flex justify-between">
             <span>
               <span
-                on:click={() => (currentNode = w.predicate)}
+                on:click={() => changeNode(w.predicate)}
                 class={`px-1 mr-2 bg-sky-200 cursor-pointer before:content-["-"] after:content-["->"]`}>
                 {w.predicate.value.split(/\/|#/).at(-1)}
               </span>
               <span
                 class="cursor-pointer bg-green-300/75"
-                on:click={() => (currentNode = w.object)}
+                on:click={() => changeNode(w.object)}
                 >{w.object.value.split(/\/|#/).at(-1)}</span>
             </span>
             <select name="" id="">
@@ -154,71 +168,74 @@
           </span>
         </li>
       </ul>
-    </fieldset>
+    </Fieldset>
     {#if isClass}
-    <fieldset class="border-2 border-neutral-700 rounded-lg py-2 px-3">
-      <legend class="px-0.5">Instances of this Class</legend>
-      <ul class="mx-0.5  gap-1 list-inside list-disc ">
-
-      </ul>
-    </fieldset>
+      <Fieldset legend="Instances of this Class">
+        <ul class="mx-0.5  gap-1 list-inside list-disc ">
+          {#each classInstances as instance}
+            <li>
+              <span
+                on:click={() => changeNode(instance)}
+                class={`px-1 mr-2 cursor-pointer bg-green-300/75`}>
+                {instance.value.split(/\//).at(-1)}
+              </span>
+            </li>
+          {/each}
+        </ul>
+      </Fieldset>
     {/if}
     {#if isProperty}
-      <fieldset class="border-2 border-neutral-700 rounded-lg py-2 px-3">
-        <legend class="px-0.5">Triples</legend>
+      <Fieldset legend="Triples">
         <ul class="mx-0.5  gap-1 list-inside list-disc ">
           {#each subsAndObjs as quad}
             <li>
               <span
-                on:click={() => (currentNode = quad.subject)}
+                on:click={() => changeNode(quad.subject)}
                 class={`px-1 mr-2 cursor-pointer bg-green-300/75`}>
                 {quad.subject.value.split(/\//).at(-1)}
               </span>
               <span
-                on:click={() => (currentNode = quad.predicate)}
+                on:click={() => changeNode(quad.predicate)}
                 class={`px-1 mr-2 bg-sky-200 cursor-pointer before:content-["-"] after:content-["->"]`}>
                 {quad.predicate.value.split(/\//).at(-1)}
               </span>
               <span
-                on:click={() => (currentNode = quad.object)}
+                on:click={() => changeNode(quad.object)}
                 class={`px-1 mr-2 cursor-pointer bg-green-300/75`}>
                 {quad.object.value.split(/\//).at(-1)}
               </span>
             </li>
           {/each}
         </ul>
-      </fieldset>
-      <fieldset class="border-2 border-neutral-700 rounded-lg py-2 px-3">
-        <legend class="px-0.5">Subjects</legend>
+      </Fieldset>
+      <Fieldset legend="Subjects">
         <ul class="mx-0.5  gap-1 list-inside list-disc ">
           {#each propSubs as w}
             <li>
               <span
-                on:click={() => (currentNode = w)}
+                on:click={() => changeNode(w)}
                 class={`px-1 mr-2 cursor-pointer bg-green-300/75`}>
                 {w.value.split(/\//).at(-1)}
               </span>
             </li>
           {/each}
         </ul>
-      </fieldset>
-      <fieldset class="border-2 border-neutral-700 rounded-lg py-2 px-3">
-        <legend class="px-0.5">Objects</legend>
+      </Fieldset>
+      <Fieldset legend="Objects">
         <ul class="mx-0.5 gap-1 list-inside list-disc ">
           {#each propObjs as w}
             <li>
               <span
-                on:click={() => (currentNode = w)}
+                on:click={() => changeNode(w)}
                 class={`px-1 mr-2 cursor-pointer bg-green-300/75`}>
                 {w.value.split(/\//).at(-1)}
               </span>
             </li>
           {/each}
         </ul>
-      </fieldset>
+      </Fieldset>
     {/if}
-    <fieldset class="border-2 border-neutral-700 rounded-lg py-2 px-3">
-      <legend class="px-0.5">Notes</legend>
+    <Fieldset legend="Notes">
       <MdChild {...{ dataset, markdown }} />
       <!-- <textarea
         class="w-full"
@@ -227,7 +244,7 @@
         placeholder="type your notes here"
         bind:value />
       {@html marked(value)} -->
-    </fieldset>
+    </Fieldset>
   </div>
 </main>
 ;
