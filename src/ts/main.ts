@@ -32,18 +32,26 @@ export let urlData;
 export let dataset;
 export let startNode;
 export let favorites;
+let url
 
 (async function main() {
-  urlData = await (
-    await fetch("https://zazuko.github.io/tbbt-ld/dist/tbbt.nq")
-  ).dataset();
-  console.log("rdf-schema", [...urlData]);
+
+  url = prompt("please enter a RDF Resource URI") ?? "https://www.rubensworks.net/#me"
+  const { data: quads1 } = await rdfDereferencer.dereference(
+    url
+    // "https://dbpedia.org/page/Inception"
+    // "https://www.rubensworks.net/#me"
+    // "https://zazuko.github.io/tbbt-ld/dist/tbbt.nq"
+  );
+  // urlData = await (await fetch("https://www.rubensworks.net/#me")).dataset();
+  // console.log("rdf-schema", [...urlData]);
+  const urlData = await storeStream(quads1)
+  console.log("test", urlData);
+  
 
   dataset = new N3.Store();
 
   const quads = [
-    q(x.Home, schema.givenName, l("Home")),
-    q(x.Home, rdfs.seeAlso, x.Harry),
     q(x.Harry, a, x.Person),
     q(x.Harry, a, x.Wizard),
     q(x.Harry, schema.givenName, l("Harry Potter")),
@@ -88,17 +96,21 @@ export let favorites;
   ];
 
   let potter = true;
-  potter = false
+  potter = false;
   if (potter) {
     dataset.addQuads(quads);
-    startNode = x.Harry;
-    favorites = [x.Harry, x.Ron, x.Hermione]
+    // startNode = x.Harry;
+    favorites = [x.Harry, x.Ron, x.Hermione];
   } else {
     dataset.addQuads([...urlData]);
-    startNode = node("http://localhost:8080/data/person/amy-farrah-fowler");
-    favorites = [node("http://localhost:8080/data/person/amy-farrah-fowler"), node("http://localhost:8080/data/person/penny")]
+    // startNode = node("http://localhost:8080/data/person/amy-farrah-fowler");
+    favorites = [
+      node("http://localhost:8080/data/person/amy-farrah-fowler"),
+      node("http://localhost:8080/data/person/penny"),
+    ];
   }
-
+  
+  startNode = url == "https://www.rubensworks.net/#me" ? node("https://www.rubensworks.net/#me") : [...dataset.match(null,null,null)][0].subject
   window.dataset = dataset;
 
   const app = new App({

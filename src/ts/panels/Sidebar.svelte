@@ -54,7 +54,7 @@
         <li
           on:click={() => (currentNode = w)}
           class={`rounded-xl px-2 bg-red-300 cursor-pointer inline-block shadow-md capitalize`}>
-          {w.value.split("/").at(-1)}
+          {w.value.split(/\/|#/).at(-1)}
         </li>
       {/each}
     </ul>
