@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "source": "index.html",
+  "distDir": ["docs/"],
+  "publicUrl": "omeslearns/",
   "scripts": {
     "go": "parcel --open chrome",
     "build": "parcel build",
