@@ -10,6 +10,8 @@ import fetch from "@rdfjs/fetch";
 
 import { storeStream } from "rdf-store-stream";
 import rdfDereferencer from "rdf-dereference";
+import { Store } from "./rdfun/Store";
+import { literal } from "./rdfun/Datafactory";
 let hi;
 
 export const rdf = namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
@@ -44,175 +46,293 @@ window.app = app;
 
 export async function changeGraph(graph) {
   if (graph == "harry potter") {
-    const dataset = new N3.Store();
+    const dataset = new Store();
+    window.dataset = dataset;
 
-    function createClass(node) {
-      return [q(node, rdf.type, rdfs.Class), nanode(node)].flat();
+    //==============================================================================
+    //#region UI functions
+    
+    //#endregion
+    //==============================================================================
+
+    function createClass(node, g = x.Schema) {
+      return [q(node, rdf.type, rdfs.Class, g)].flat();
     }
-    function createRelation(node) {
+    function createRelation(node, g = x.Schema) {
       return [
-        q(node, rdf.type, rdf.Property),
-        q(node, rdfs.domain, x.Node),
-        q(node, rdfs.range, x.Node),
-      ];
-    }
-    function nanode(node) {
-      return [q(node, rdf.type, x.Node)];
-    }
-    function type(s, o) {
-      return [q(s, rdf.type, o), nanode(s), createClass(o)].flat();
-    }
-    function triple(s, p, o) {
-      return [q(s, p, o), nanode(s), createRelation(p), nanode(o)].flat();
+        q(node, rdf.type, rdf.Property, g),
+        q(node, rdfs.domain, rdfs.Resource, g),
+        q(node, rdfs.range, rdfs.Resource, g),
+      ].flat();
     }
 
-    const nodes = [
-      nanode(x.Harry),
-      nanode(x.Ronald),
-      nanode(x.Hermione),
-      nanode(x.Dobby),
-      nanode(x.Draco),
-      nanode(x.Albus),
-      nanode(x.Severus),
-      nanode(x.Lily),
-      nanode(x.James),
-      nanode(x.Petunia),
-      nanode(x.Dudley),
-      nanode(x.Vernon),
-      nanode(x.Hedwig),
-      nanode(x.Voldemort),
-    ].flat();
+    function classify(c, subjArray) {
+      return subjArray
+        .map((s) => [q(s, rdf.type, c, x.Data), createClass(c)])
+        .flat();
+    }
+    // TODO: literal check for relation
+    function addRelation(s, p, o, g = x.Data) {
+      return [q(s, p, o, g), createRelation(p)].flat();
+    }
+    /**
+     * lets this take (s, Array<[p,o]>) as well as (s, p, Array<o>) as args
+     * @param args
+     * @returns
+     */
+    function relations(...args) {
+      const [s, p, o] = args;
+      if (args[1]?.[0]?.length)
+        return args[1].map((poArray) => relations(args[0], poArray));
+      else if (args[1]?.length)
+        return args[1][1].map((oArray) =>
+          relations(args[0], args[1][0], oArray)
+        );
+      else return addRelation(s, p, o);
+    }
+
+    function mdChild(parent, block, string) {
+      return [
+        q(parent, x.mdChild, block, x.Markdown),
+        q(block, x.mdContent, literal(string), x.Markdown),
+        classify(x.Block, [block]),
+      ].flat();
+    }
+
+    const Apfelstrudel = x.Apfelstrudel;
+    const Apple = x.Apple;
+    const Austria = x.Austria;
+    const Belgium = x.Belgium;
+    const Bread = x.Bread;
+    const Brownie = x.Brownie;
+    const Burger = x.Burger;
+    const Butter = x.Butter;
+    const Cabbage = x.Cabbage;
+    const Cheese = x.Cheese;
+    const China = x.China;
+    const Chocolate = x.Chocolate;
+    const Country = x.Country;
+    const Cream = x.Cream;
+    const Dessert = x.Dessert;
+    const Dim_Sum = x.Dim_Sum;
+    const Dish = x.Dish;
+    const Dough = x.Dough;
+    const Egg = x.Egg;
+    const Filo = x.Filo;
+    const Fish = x.Fish;
+    const Flour = x.Flour;
+    const Food = x.Food;
+    const France = x.France;
+    const Garlic = x.Garlic;
+    const Germany = x.Germany;
+    const Green_Beans = x.Green_Beans;
+    const Ice_Cream = x.Ice_Cream;
+    const Italy = x.Italy;
+    const Japan = x.Japan;
+    const Jiaozi = x.Jiaozi;
+    const Ketchup = x.Ketchup;
+    const Lard = x.Lard;
+    const Lettuce = x.Lettuce;
+    const Meal = x.Meal;
+    const Meat = x.Meat;
+    const Mexico = x.Mexico;
+    const Milk = x.Milk;
+    const Onion = x.Onion;
+    const Paella = x.Paella;
+    const Pizza = x.Pizza;
+    const Fries = x.Fries;
+    const Potato = x.Potato;
+    const Rice = x.Rice;
+    const Saffron = x.Saffron;
+    const Cinnamon = x.Cinnamon;
+    const Salt = x.Salt;
+    const Sauce = x.Sauce;
+    const Soy = x.Soy;
+    const Soy_Sauce = x.Soy_Sauce;
+    const Spain = x.Spain;
+    const Spice = x.Spice;
+    const Sugar = x.Sugar;
+    const Sushi = x.Sushi;
+    const Switzerland = x.Switzerland;
+    const Taco = x.Taco;
+    const Tomato = x.Tomato;
+    const Tomato_Sauce = x.Tomato_Sauce;
+    const Tortilla = x.Tortilla;
+    const USA = x.USA;
+    const Vanilla = x.Vanilla;
+    const Vegetable = x.Vegetable;
+    const Wasabi = x.Wasabi;
+    const Cocoa = x.Cocoa;
+
+    const origin = x.origin;
+    const ingredient = x.ingredient;
 
     const types = [
-      type(x.Dobby, x.Creature),
-      type(x.Dobby, x.Houseelf),
-      type(x.Hedwig, x.Animal),
-
-      type(x.Petunia, x.Person),
-      type(x.Dudley, x.Person),
-      type(x.Vernon, x.Person),
-      type(x.Petunia, x.Muggle),
-      type(x.Dudley, x.Muggle),
-      type(x.Vernon, x.Muggle),
-
-      type(x.Harry, x.Person),
-      type(x.Ronald, x.Person),
-      type(x.Hermione, x.Person),
-      type(x.Draco, x.Person),
-      type(x.Albus, x.Person),
-      type(x.Severus, x.Person),
-      type(x.Lily, x.Person),
-      type(x.James, x.Person),
-      type(x.Voldemort, x.Person),
-
-      type(x.Harry, x.Wizard),
-      type(x.Ronald, x.Wizard),
-      type(x.Hermione, x.Wizard),
-      type(x.Draco, x.Wizard),
-      type(x.Albus, x.Wizard),
-      type(x.Severus, x.Wizard),
-      type(x.Lily, x.Wizard),
-      type(x.James, x.Wizard),
-      type(x.Voldemort, x.Wizard),
-      type(x.Voldemort, x.Deatheater),
-
-      type(x.Albus, x.Teacher),
-      type(x.Severus, x.Teacher),
-
-
-    ].flat();
+      classify(Food, [
+        Cinnamon,
+        Apfelstrudel,
+        Apple,
+        Bread,
+        Brownie,
+        Burger,
+        Butter,
+        Cabbage,
+        Cheese,
+        Chocolate,
+        Cream,
+        Dim_Sum,
+        Jiaozi,
+        Fries,
+        Dough,
+        Egg,
+        Filo,
+        Fish,
+        Flour,
+        Garlic,
+        Green_Beans,
+        Ice_Cream,
+        Ketchup,
+        Lard,
+        Lettuce,
+        Meat,
+        Milk,
+        Onion,
+        Paella,
+        Pizza,
+        Potato,
+        Rice,
+        Saffron,
+        Salt,
+        Sauce,
+        Soy_Sauce,
+        Soy,
+        Sugar,
+        Sushi,
+        Taco,
+        Tomato_Sauce,
+        Tomato,
+        Tortilla,
+        Vanilla,
+        Wasabi,
+      ]),
+      classify(Dish, [
+        Pizza,
+        Sushi,
+        Burger,
+        Taco,
+        Jiaozi,
+        Fries,
+        Dim_Sum,
+        Paella,
+        Ice_Cream,
+        Brownie,
+        Apfelstrudel,
+      ]),
+      classify(Meal, [
+        Pizza,
+        Sushi,
+        Burger,
+        Jiaozi,
+        Fries,
+        Taco,
+        Dim_Sum,
+        Paella,
+      ]),
+      classify(Dessert, [Ice_Cream, Brownie, Apfelstrudel, Chocolate]),
+      classify(Vegetable, [Tomato, Potato, Lettuce, Cabbage]),
+      classify(Spice, [Saffron, Vanilla, Cinnamon]),
+      classify(Country, [
+        Italy,
+        Japan,
+        USA,
+        Germany,
+        Belgium,
+        France,
+        Mexico,
+        China,
+        Spain,
+        Switzerland,
+        Austria,
+      ]),
+    ].flat(3);
 
     const triples = [
-      triple(x.Harry, x.hobby, x.Quidditch),
-      triple(x.Ronald, x.hobby, x.Quidditch),
-      triple(x.Draco, x.hobby, x.Quidditch),
-      triple(x.James, x.hobby, x.Quidditch),
-      triple(x.Hermione, x.hobby, x.Knitting),
+      relations(Pizza, [
+        [origin, [Italy]],
+        [ingredient, [Dough, Tomato_Sauce, Cheese]],
+      ]),
+      relations(Sushi, [
+        [origin, [Japan]],
+        [ingredient, [Rice, Fish, Wasabi]],
+      ]),
+      relations(Burger, [
+        [origin, [USA, Germany]],
+        [ingredient, [Meat, Bread, Lettuce, Tomato, Sauce]],
+      ]),
+      relations(Fries, [
+        [origin, [Belgium, France]],
+        [ingredient, [Potato, Ketchup]],
+      ]),
+      relations(Taco, [
+        [origin, [Mexico]],
+        [ingredient, [Tortilla, Meat, Onion]],
+      ]),
+      relations(Tortilla, [
+        [origin, [Mexico]],
+        [ingredient, [Flour, Salt, Lard]],
+      ]),
+      relations(Jiaozi, [
+        [origin, [China]],
+        [ingredient, [Dough, Meat, Cabbage, Garlic, Soy_Sauce]],
+      ]),
+      relations(Soy_Sauce, [[ingredient, [Soy, Salt, Flour]]]),
+      relations(Paella, [
+        [origin, [Spain]],
+        [ingredient, [Rice, Meat, Saffron, Tomato, Green_Beans]],
+      ]),
+      relations(Ice_Cream, [
+        [origin, [Italy, China]],
+        [ingredient, [Cream, Milk, Egg, Sugar, Vanilla]],
+      ]),
+      relations(Brownie, [
+        [origin, [USA]],
+        [ingredient, [Chocolate, Butter, Egg, Flour, Sugar]],
+      ]),
+      relations(Apfelstrudel, [
+        [origin, [Switzerland, Austria]],
+        [ingredient, [Apple, Cinnamon, Filo, Butter, Egg]],
+      ]),
+      relations(Chocolate, [[ingredient, [Cocoa, Butter, Sugar, Milk]]]),
+    ].flat(3);
 
-      triple(x.Harry, x.friends, x.Hermione),
-      triple(x.Harry, x.friends, x.Ronald),
-      triple(x.Harry, x.friends, x.Dobby),
+    const markdown = [
+      // markdown
+      relations(Pizza, x.md, x.PizzaMD),
 
-      triple(x.Harry, x.pet, x.Hedwig),
-      triple(x.Harry, x.friends, null),
+      mdChild(x.PizzaMD, x.PizzaMD1, "Pizza is probably the most popular food in the world."),
+      mdChild(x.PizzaMD, x.PizzaMD2, "famous Pizza variations:"),
+      mdChild(x.PizzaMD2, x.PizzaMD21, "Hawai"),
+      mdChild(x.PizzaMD21, x.PizzaMD211, "Toppings:"),
+      mdChild(x.PizzaMD211, x.PizzaMD2111, "Ham"),
+      mdChild(x.PizzaMD211, x.PizzaMD2112, "Ananas"),
 
-      triple(x.Ronald, x.friends, x.Hermione),
-      triple(x.Ronald, x.friends, x.Harry),
+      mdChild(x.PizzaMD2, x.PizzaMD22, "Caprese"),
+      mdChild(x.PizzaMD22, x.PizzaMD221, "Toppings:"),
+      mdChild(x.PizzaMD221, x.PizzaMD2211, "Tomato"),
+      mdChild(x.PizzaMD221, x.PizzaMD2212, "Basil"),
+      mdChild(x.PizzaMD221, x.PizzaMD2213, "Mozarella"),
 
-      triple(x.Hermione, x.firends, x.Harry),
-      triple(x.Hermione, x.friends, x.Ronald),
+      relations(Ice_Cream, x.md, x.IceMd),
+      mdChild(x.IceMd, x.IceMd1, "Most people like Ice Cream"),
+      mdChild(x.IceMd, x.IceMd2, "variants:"),
+      relations(x.IceMd2, x.mdChild, x.PizzaMD2112),
 
-      triple(x.Harry, x.father, x.James),
-      triple(x.Harry, x.mother, x.Lily),
+    ].flat(3);
 
-      triple(x.Harry, x.related, x.Petunia),
-      triple(x.Harry, x.related, x.Vernon),
-      triple(x.Harry, x.related, x.Dudley),
-
-
-
-      triple(x.Harry, rdfs.label, l("Harry Potter")),
-      triple(x.Harry, foaf.givenName, l("Harry")),
-      triple(x.Harry, foaf.familyName, l("Potter")),
-      triple(x.Harry, x.hairColor, l("brown")),
-      triple(x.Ronald, rdfs.label, l("Ronald Weasley")),
-      triple(x.Ronald, foaf.givenName, l("Ronald")),
-      triple(x.Ronald, foaf.familyName, l("Weasley")),
-      triple(x.Ronald, x.hairColor, l("red")),
-      triple(x.Hermione, rdfs.label, l("Hermione Granger")),
-      triple(x.Hermione, foaf.givenName, l("Hermione")),
-      triple(x.Hermione, foaf.familyName, l("Granger")),
-      triple(x.Hermione, x.hairColor, l("brown")),
-      triple(x.Dobby, rdfs.label, l("Dobby")),
-      triple(x.Dobby, foaf.givenName, l("Dobby")),
-      triple(x.Dobby, foaf.familyName, l("Free Elf")),
-      triple(x.Dobby, x.hairColor, l("none")),
-      triple(x.Draco, rdfs.label, l("Draco Malfoy")),
-      triple(x.Draco, foaf.givenName, l("Draco")),
-      triple(x.Draco, foaf.familyName, l("Malfoy")),
-      triple(x.Draco, x.hairColor, l("blonde")),
-      triple(x.Albus, rdfs.label, l("Albus Dumbledore")),
-      triple(x.Albus, foaf.givenName, l("Albus")),
-      triple(x.Albus, foaf.familyName, l("Dumbledore")),
-      triple(x.Albus, x.hairColor, l("silver")),
-      triple(x.Severus, rdfs.label, l("Severus Snape")),
-      triple(x.Severus, foaf.givenName, l("Severus")),
-      triple(x.Severus, foaf.familyName, l("Snape")),
-      triple(x.Severus, x.hairColor, l("black")),
-      triple(x.Lily, rdfs.label, l("Lily Potter")),
-      triple(x.Lily, foaf.givenName, l("Lily")),
-      triple(x.Lily, foaf.familyName, l("Potter")),
-      triple(x.Lily, x.hairColor, l("red")),
-      triple(x.James, rdfs.label, l("James Potter")),
-      triple(x.James, foaf.givenName, l("James")),
-      triple(x.James, foaf.familyName, l("Potter")),
-      triple(x.James, x.hairColor, l("brown")),
-      triple(x.Petunia, rdfs.label, l("Petunia Dursley")),
-      triple(x.Petunia, foaf.givenName, l("Petunia")),
-      triple(x.Petunia, foaf.familyName, l("Dursley")),
-      triple(x.Petunia, x.hairColor, l("brown")),
-      triple(x.Dudley, rdfs.label, l("Dudley Dursley")),
-      triple(x.Dudley, foaf.givenName, l("Dudley")),
-      triple(x.Dudley, foaf.familyName, l("Dursley")),
-      triple(x.Dudley, x.hairColor, l("brown")),
-      triple(x.Vernon, rdfs.label, l("Vernon Dursley")),
-      triple(x.Vernon, foaf.givenName, l("Vernon")),
-      triple(x.Vernon, foaf.familyName, l("Dursley")),
-      triple(x.Vernon, x.hairColor, l("brown")),
-      triple(x.Hedwig, rdfs.label, l("Hedwig")),
-      triple(x.Hedwig, foaf.givenName, l("Hedwig")),
-      triple(x.Hedwig, x.hairColor, l("white")),
-      triple(x.Voldemort, rdfs.label, l("Lord Voldemort")),
-      triple(x.Voldemort, foaf.givenName, l("Tom")),
-      triple(x.Voldemort, foaf.familyName, l("Riddle")),
-      triple(x.Voldemort, x.hairColor, l("brown")),
-    ].flat();
-
-    // console.error(nodes)
-
-    dataset.addQuads([nodes, types, triples].flat());
-    const startNode = x.Harry;
-    const favs = [x.Harry, x.Ronald, x.Hermione];
+    dataset.addQuads([types, triples, markdown].flat());
+    const startNode = Pizza;
+    const favs = [Pizza, Sushi, Fries];
+    console.log([...dataset.match(null, null, null, x.Vocab)]);
     return [dataset, startNode, favs];
   }
   if (graph == "rubenworks") {
@@ -225,7 +345,7 @@ export async function changeGraph(graph) {
     );
     const urlData = await storeStream(data);
     const startNode = node("https://www.rubensworks.net/#me");
-    const dataset = new N3.Store();
+    const dataset = new Store();
     dataset.addQuads([...urlData]);
     return [dataset, startNode, [startNode]];
   }
@@ -236,7 +356,7 @@ export async function changeGraph(graph) {
     const { data } = await rdfDereferencer.dereference(url);
     const urlData = await storeStream(data);
     const startNode = rdfs.Class;
-    const dataset = new N3.Store();
+    const dataset = new Store();
     dataset.addQuads([...urlData]);
     return [dataset, startNode, [startNode]];
   }

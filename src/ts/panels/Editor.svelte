@@ -7,6 +7,7 @@
   import RdfDereferencer from "rdf-dereference";
   import { storeStream } from "rdf-store-stream";
   import Fieldset from "../components/Fieldset.svelte";
+import App from "../App.svelte";
 
   export let currentNode;
   export let dataset;
@@ -14,6 +15,7 @@
   export let changeNode;
   let maxNest = 0;
   let title;
+  let children = []
   $: {
     maxNest = (() => {
       if ([...dataset]?.length > 500) return 1;
@@ -75,24 +77,31 @@
         node
       );
     }
+    children = [...dataset.match(currentNode, x.mdChild, null)]
+    // console.error(children)
   }
 </script>
 
 <main
   class="bg-neutral-50 col-span-60 row-span-full order-3 rounded-md overflow-auto">
-  <div class="h-full px-8 py-5 flex flex-col gap-2">
-    <header class="border-2 border-neutral-700 rounded-lg py-2 px-5">
-      <h2 class="text-6xl ">
-        <span
-          class:bg-red-300={isClass}
-          class:bg-sky-200={isProperty}
-          class={isProperty ? `before:content-["-"] after:content-["->"]` : ""}
-          class:bg-green-300={!isClass && !isProperty}>{title}</span>
-      </h2>
-      <div class="text-gray-400">
-        {currentNode.value}
-      </div>
-    </header>
+  <div
+    class="h-full px-8 {nestLevel == 0 ? 'py-5' : 'py-2'} flex flex-col gap-2">
+    {#if nestLevel == 0}
+      <header class="border-2 border-neutral-700 rounded-lg py-2 px-5">
+        <h2 class="text-6xl ">
+          <span
+            class:bg-red-300={isClass}
+            class:bg-sky-200={isProperty}
+            class={isProperty
+              ? `before:content-["-"] after:content-["->"]`
+              : ""}
+            class:bg-green-300={!isClass && !isProperty}>{title}</span>
+        </h2>
+        <div class="text-gray-400">
+          {currentNode.value}
+        </div>
+      </header>
+    {/if}
     <ul class="px-0 flex justify-center flex-wrap gap-1">
       {#each classes as w, i}
         <li
@@ -101,12 +110,6 @@
           {w.object.value.split(/\/|#/).at(-1)}
         </li>
       {/each}
-      {#if isProperty || isClass}
-        <li
-          class={`rounded-xl px-2 bg-red-300 cursor-pointer inline-block shadow-md capitalize`}>
-          {isProperty ? "Property" : "Class"}
-        </li>
-      {/if}
       <li
         class={`rounded-xl px-2 ${"bg-gray-300"} cursor-pointer inline-block shadow-md capitalize`}>
         + new Class
@@ -168,8 +171,9 @@
               </span>
             </span>
             <select name="" id="">
+              <option value="node" default>Node</option>
               {#each allClasses as quad}
-                <option value={quad.value.split(/\/|#/).at(-1)} default
+                <option value={quad.value.split(/\/|#/).at(-1)}
                   >{quad.value.split(/\/|#/).at(-1)}</option>
               {/each}
             </select>
@@ -184,14 +188,25 @@
     </Fieldset>
     {#if isClass}
       <Fieldset legend="Instances of this Class">
-        <ul class="mx-0.5  gap-1 list-inside list-disc ">
+        <ul class="mx-0.5  gap-1 ">
           {#each classInstances as instance}
             <li>
-              <span
-                on:click={() => changeNode(instance)}
-                class={`px-1 mr-2 cursor-pointer bg-green-300/75`}>
-                {instance.value.split(/\//).at(-1)}
-              </span>
+              <details class="inline">
+                <summary>
+                  <span
+                    class="cursor-pointer bg-green-300/75"
+                    on:click={() => changeNode(instance)}
+                    >{instance.value.split(/\//).at(-1)}</span>
+                </summary>
+                {#if nestLevel < maxNest}
+                  <svelte:self
+                    {...{
+                      currentNode: instance,
+                      dataset,
+                      nestLevel: ++nestLevel,
+                    }} />
+                {/if}
+              </details>
             </li>
           {/each}
         </ul>
@@ -248,15 +263,19 @@
         </ul>
       </Fieldset>
     {/if}
-    <Fieldset legend="Notes">
-      <MdChild {...{ dataset, markdown }} />
-      <!-- <textarea
-        class="w-full"
-        name=""
-        id=""
-        placeholder="type your notes here"
-        bind:value />
-      {@html marked(value)} -->
-    </Fieldset>
+    {#if classes.some((quad) => quad.object.equals(x.Block))}
+      <Fieldset legend="Notes">
+        <!-- {#each children as childQuad} -->
+          
+        <MdChild {...{ dataset, markdown:currentNode, changeNode }} />
+        <!-- {/each} -->
+
+      </Fieldset>
+    {:else}
+      <Fieldset legend="Notes">
+        <MdChild {...{ dataset, markdown, changeNode }} />
+
+      </Fieldset>
+    {/if}
   </div>
 </main>

@@ -42,8 +42,11 @@
     <summary class="pb-1 cursor-pointer text-xl">⭐️ Favorites</summary>
     <ul class="pl-3 list-inside list-disc">
       {#each favs as w}
-        <li class="cursor-pointer" on:click={() => (currentNode = w)}>
-          {w.value.split("/").at(-1)}
+        <li class="cursor-pointer " on:click={() => (currentNode = w)}>
+          <span class="bg-green-300/75">
+
+            {w.value.split("/").at(-1)}
+          </span>
         </li>
       {/each}
     </ul>

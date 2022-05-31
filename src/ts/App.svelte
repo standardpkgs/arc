@@ -38,7 +38,6 @@
       ...new Set([...dataset].map((quad) => quad.predicate.value)),
     ].map(node);
     console.log("refresh", [...dataset].length);
-    window.dataset = dataset
   }
 </script>
 
