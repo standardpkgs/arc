@@ -1,13 +1,26 @@
 <script>
   import { color, rw } from "../Helpers";
   import { marked } from "marked";
-  import { foaf, node, q, rdf, rdfs, schema, x } from "../main";
+  import {
+    classify,
+    createClass,
+    foaf,
+    node,
+    q,
+    rdf,
+    rdfs,
+    schema,
+    x,
+  } from "../main";
   import { onMount } from "svelte";
   import MdChild from "../components/MdChild.svelte";
   import RdfDereferencer from "rdf-dereference";
   import { storeStream } from "rdf-store-stream";
   import Fieldset from "../components/Fieldset.svelte";
-import App from "../App.svelte";
+  import App from "../App.svelte";
+  import { log } from "util";
+  import {} from "os";
+  import Title from "../components/Title.svelte";
 
   export let currentNode;
   export let dataset;
@@ -15,7 +28,7 @@ import App from "../App.svelte";
   export let changeNode;
   let maxNest = 0;
   let title;
-  let children = []
+  let children = [];
   $: {
     maxNest = (() => {
       if ([...dataset]?.length > 500) return 1;
@@ -36,10 +49,10 @@ import App from "../App.svelte";
   let subsAndObjs, propSubs, propObjs;
   let classInstances;
 
+  title =
+    [...dataset?.match(currentNode, rdf.label, null)]?.[0]?.object.value ??
+    currentNode.value.split(/\/|#/).at(-1);
   $: {
-    title =
-      [...dataset?.match(currentNode, rdf.label, null)]?.[0]?.object.value ??
-      currentNode.value.split(/\/|#/).at(-1);
     classes = [...dataset.match(currentNode, rdf.type, null)];
     allClasses = [
       ...new Set(
@@ -77,25 +90,21 @@ import App from "../App.svelte";
         node
       );
     }
-    children = [...dataset.match(currentNode, x.mdChild, null)]
+    children = [...dataset.match(currentNode, x.mdChild, null)];
     // console.error(children)
   }
 </script>
 
 <main
-  class="bg-neutral-50 col-span-60 row-span-full order-3 rounded-md overflow-auto">
+  class="bg-neutral-50 col-span-60 row-span-full order-3 rounded-md overflow-auto"
+>
   <div
-    class="h-full px-8 {nestLevel == 0 ? 'py-5' : 'py-2'} flex flex-col gap-2">
+    class="h-full px-8 {nestLevel == 0 ? 'py-5' : 'py-2'} flex flex-col gap-2"
+  >
     {#if nestLevel == 0}
       <header class="border-2 border-neutral-700 rounded-lg py-2 px-5">
         <h2 class="text-6xl ">
-          <span
-            class:bg-red-300={isClass}
-            class:bg-sky-200={isProperty}
-            class={isProperty
-              ? `before:content-["-"] after:content-["->"]`
-              : ""}
-            class:bg-green-300={!isClass && !isProperty}>{title}</span>
+          <Title bind:title />
         </h2>
         <div class="text-gray-400">
           {currentNode.value}
@@ -106,12 +115,21 @@ import App from "../App.svelte";
       {#each classes as w, i}
         <li
           on:click={() => changeNode(w.object)}
-          class={`rounded-xl px-2 bg-red-300 cursor-pointer inline-block shadow-md capitalize`}>
+          class={`rounded-xl px-2 bg-red-300 cursor-pointer inline-block shadow-md capitalize`}
+        >
           {w.object.value.split(/\/|#/).at(-1)}
         </li>
       {/each}
       <li
-        class={`rounded-xl px-2 ${"bg-gray-300"} cursor-pointer inline-block shadow-md capitalize`}>
+        class={`rounded-xl px-2 ${"bg-gray-300"} cursor-pointer inline-block shadow-md capitalize`}
+        on:click={() => {
+          const classQuads = createClass();
+          const classNode = classQuads[0].subject;
+          dataset.addQuads(classQuads);
+          dataset.addQuads([q(currentNode, rdf.type, classNode, x.Data)]);
+          changeNode(currentNode);
+        }}
+      >
         + new Class
       </li>
     </ul>
@@ -122,7 +140,8 @@ import App from "../App.svelte";
             <span>
               <span
                 on:click={() => changeNode(w.predicate)}
-                class={`px-1 mr-2 bg-orange-200 cursor-pointer before:content-["-"] after:content-["->"]`}>
+                class={`px-1 mr-2 bg-orange-200 cursor-pointer before:content-["-"] after:content-["->"]`}
+              >
                 {w.predicate.value.split(/\/|#/).at(-1)}
               </span>
               <span class="text-lime-600">{`"${w.object.value}"`}</span>
@@ -146,9 +165,11 @@ import App from "../App.svelte";
         {#each relations as w, i}
           <li class="flex justify-between">
             <span class="flex align-top">
+              {"+ "}
               <span
                 on:click={() => changeNode(w.predicate)}
-                class={`px-1 mr-2 bg-sky-200 cursor-pointer before:content-["-"] after:content-["->"]`}>
+                class={`px-1 mr-2 bg-sky-200 cursor-pointer before:content-["-"] after:content-["->"]`}
+              >
                 {w.predicate.value.split(/\/|#/).at(-1)}
               </span>
               <span>
@@ -157,7 +178,8 @@ import App from "../App.svelte";
                     <span
                       class="cursor-pointer bg-green-300/75"
                       on:click={() => changeNode(w.object)}
-                      >{w.object.value.split(/\/|#/).at(-1)}</span>
+                      >{w.object.value.split(/\/|#/).at(-1)}</span
+                    >
                   </summary>
                   {#if nestLevel < maxNest}
                     <svelte:self
@@ -165,7 +187,8 @@ import App from "../App.svelte";
                         currentNode: w.object,
                         dataset,
                         nestLevel: ++nestLevel,
-                      }} />
+                      }}
+                    />
                   {/if}
                 </details>
               </span>
@@ -174,7 +197,8 @@ import App from "../App.svelte";
               <option value="node" default>Node</option>
               {#each allClasses as quad}
                 <option value={quad.value.split(/\/|#/).at(-1)}
-                  >{quad.value.split(/\/|#/).at(-1)}</option>
+                  >{quad.value.split(/\/|#/).at(-1)}</option
+                >
               {/each}
             </select>
           </li>
@@ -196,7 +220,8 @@ import App from "../App.svelte";
                   <span
                     class="cursor-pointer bg-green-300/75"
                     on:click={() => changeNode(instance)}
-                    >{instance.value.split(/\//).at(-1)}</span>
+                    >{instance.value.split(/\//).at(-1)}</span
+                  >
                 </summary>
                 {#if nestLevel < maxNest}
                   <svelte:self
@@ -204,7 +229,8 @@ import App from "../App.svelte";
                       currentNode: instance,
                       dataset,
                       nestLevel: ++nestLevel,
-                    }} />
+                    }}
+                  />
                 {/if}
               </details>
             </li>
@@ -219,17 +245,20 @@ import App from "../App.svelte";
             <li>
               <span
                 on:click={() => changeNode(quad.subject)}
-                class={`px-1 mr-2 cursor-pointer bg-green-300/75`}>
+                class={`px-1 mr-2 cursor-pointer bg-green-300/75`}
+              >
                 {quad.subject.value.split(/\//).at(-1)}
               </span>
               <span
                 on:click={() => changeNode(quad.predicate)}
-                class={`px-1 mr-2 bg-sky-200 cursor-pointer before:content-["-"] after:content-["->"]`}>
+                class={`px-1 mr-2 bg-sky-200 cursor-pointer before:content-["-"] after:content-["->"]`}
+              >
                 {quad.predicate.value.split(/\//).at(-1)}
               </span>
               <span
                 on:click={() => changeNode(quad.object)}
-                class={`px-1 mr-2 cursor-pointer bg-green-300/75`}>
+                class={`px-1 mr-2 cursor-pointer bg-green-300/75`}
+              >
                 {quad.object.value.split(/\//).at(-1)}
               </span>
             </li>
@@ -242,7 +271,8 @@ import App from "../App.svelte";
             <li>
               <span
                 on:click={() => changeNode(w)}
-                class={`px-1 mr-2 cursor-pointer bg-green-300/75`}>
+                class={`px-1 mr-2 cursor-pointer bg-green-300/75`}
+              >
                 {w.value.split(/\//).at(-1)}
               </span>
             </li>
@@ -255,7 +285,8 @@ import App from "../App.svelte";
             <li>
               <span
                 on:click={() => changeNode(w)}
-                class={`px-1 mr-2 cursor-pointer bg-green-300/75`}>
+                class={`px-1 mr-2 cursor-pointer bg-green-300/75`}
+              >
                 {w.value.split(/\//).at(-1)}
               </span>
             </li>
@@ -266,15 +297,13 @@ import App from "../App.svelte";
     {#if classes.some((quad) => quad.object.equals(x.Block))}
       <Fieldset legend="Notes">
         <!-- {#each children as childQuad} -->
-          
-        <MdChild {...{ dataset, markdown:currentNode, changeNode }} />
-        <!-- {/each} -->
 
+        <MdChild {...{ dataset, markdown: currentNode, changeNode }} />
+        <!-- {/each} -->
       </Fieldset>
     {:else}
       <Fieldset legend="Notes">
         <MdChild {...{ dataset, markdown, changeNode }} />
-
       </Fieldset>
     {/if}
   </div>

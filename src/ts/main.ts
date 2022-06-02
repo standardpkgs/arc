@@ -30,6 +30,7 @@ export const {
   variable,
 } = N3.DataFactory;
 const a = rdf.type;
+localStorage.iri = 0;
 
 export let urlData;
 export let dataset;
@@ -42,62 +43,69 @@ const app = new App({
   props: {},
 });
 
-window.app = app;
+export function iri() {
+  return `node_${++localStorage.iri}`
+}
+
+export function createNode(label, graph = x.Data) {
+  const s = node(iri())
+  return [
+    q(s, rdf.type, rdfs.Resource, graph),
+    q(s, rdf.label, label, graph)
+  ]
+}
+export function createClass(label = "anon Class", g = x.Schema) {
+  const s = node(iri())
+  return [q(s, rdf.type, rdfs.Class, g),
+    q(s, rdf.label, l(label), g)
+  ];
+}
+export function createRelation(label = "anon Rel", g = x.Schema) {
+  const s = node(iri())
+  return [
+    q(s, rdf.type, rdf.Property, g),
+    q(s, rdfs.domain, rdfs.Resource, g),
+    q(s, rdfs.range, rdfs.Resource, g),
+  ].flat();
+}
+
+export function classify(c, subjArray) {
+  return subjArray
+    .map((s) => [q(s, rdf.type, c, x.Data), createClass(c)])
+    .flat();
+}
+// TODO: literal check for relation
+export function addRelation(s, p, o, g = x.Data) {
+  return [q(s, p, o, g), createRelation(p)].flat();
+}
+/**
+ * lets this take (s, Array<[p,o]>) as well as (s, p, Array<o>) as args
+ * @param args
+ * @returns
+ */
+export function relations(...args) {
+  const [s, p, o] = args;
+  if (args[1]?.[0]?.length)
+    return args[1].map((poArray) => relations(args[0], poArray));
+  else if (args[1]?.length)
+    return args[1][1].map((oArray) =>
+      relations(args[0], args[1][0], oArray)
+    );
+  else return addRelation(s, p, o);
+}
+
+export function mdChild(parent, block, string) {
+  return [
+    q(parent, x.mdChild, block, x.Markdown),
+    q(block, x.mdContent, literal(string), x.Markdown),
+    classify(x.Block, [block]),
+  ].flat();
+}
 
 export async function changeGraph(graph) {
   if (graph == "harry potter") {
     const dataset = new Store();
     window.dataset = dataset;
-
-    //==============================================================================
-    //#region UI functions
-    
-    //#endregion
-    //==============================================================================
-
-    function createClass(node, g = x.Schema) {
-      return [q(node, rdf.type, rdfs.Class, g)].flat();
-    }
-    function createRelation(node, g = x.Schema) {
-      return [
-        q(node, rdf.type, rdf.Property, g),
-        q(node, rdfs.domain, rdfs.Resource, g),
-        q(node, rdfs.range, rdfs.Resource, g),
-      ].flat();
-    }
-
-    function classify(c, subjArray) {
-      return subjArray
-        .map((s) => [q(s, rdf.type, c, x.Data), createClass(c)])
-        .flat();
-    }
-    // TODO: literal check for relation
-    function addRelation(s, p, o, g = x.Data) {
-      return [q(s, p, o, g), createRelation(p)].flat();
-    }
-    /**
-     * lets this take (s, Array<[p,o]>) as well as (s, p, Array<o>) as args
-     * @param args
-     * @returns
-     */
-    function relations(...args) {
-      const [s, p, o] = args;
-      if (args[1]?.[0]?.length)
-        return args[1].map((poArray) => relations(args[0], poArray));
-      else if (args[1]?.length)
-        return args[1][1].map((oArray) =>
-          relations(args[0], args[1][0], oArray)
-        );
-      else return addRelation(s, p, o);
-    }
-
-    function mdChild(parent, block, string) {
-      return [
-        q(parent, x.mdChild, block, x.Markdown),
-        q(block, x.mdContent, literal(string), x.Markdown),
-        classify(x.Block, [block]),
-      ].flat();
-    }
 
     const Apfelstrudel = x.Apfelstrudel;
     const Apple = x.Apple;

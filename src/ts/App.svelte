@@ -5,7 +5,7 @@
   import Graph from "./panels/Graph.svelte";
   import Mentions from "./panels/Mentions.svelte";
   import Statusbar from "./panels/Statusbar.svelte";
-  import { changeGraph, init, l, node, rdf, rdfs, x } from "./main";
+  import { changeGraph, l, node, rdf, rdfs, x } from "./main";
   import { onMount } from "svelte";
 
   let dataset = [];
