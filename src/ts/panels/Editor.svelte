@@ -133,18 +133,18 @@
         + new Class
       </li>
     </ul>
-    <Fieldset legend="Attributes">
+    <Fieldset legend="Properties">
       <ul class="mx-0.5 flex flex-col gap-1">
         {#each propertys as w, i}
           <li class="flex justify-between">
             <span>
               <span
                 on:click={() => changeNode(w.predicate)}
-                class={`px-1 mr-2 bg-orange-200 cursor-pointer before:content-["-"] after:content-["->"]`}
+                class={`px-1 mr-2 bg-sky-200 cursor-pointer before:content-["-"] after:content-[">"]`}
               >
                 {w.predicate.value.split(/\/|#/).at(-1)}
               </span>
-              <span class="text-lime-600">{`"${w.object.value}"`}</span>
+              <span class="text-purple-500">{`"${w.object.value}"`}</span>
             </span>
             <select name="" id="">
               <option value="Text" default>Text</option>
@@ -161,47 +161,46 @@
       </ul>
     </Fieldset>
     <Fieldset legend="Relations">
-      <ul class="mx-0.5 flex flex-col gap-1">
+      <ul class="mx-0.5 list-inside list-disc">
         {#each relations as w, i}
-          <li class="flex justify-between">
-            <span class="flex align-top">
-              {"+ "}
-              <span
-                on:click={() => changeNode(w.predicate)}
-                class={`px-1 mr-2 bg-sky-200 cursor-pointer before:content-["-"] after:content-["->"]`}
-              >
-                {w.predicate.value.split(/\/|#/).at(-1)}
-              </span>
-              <span>
-                <details class="inline">
-                  <summary>
-                    <span
-                      class="cursor-pointer bg-green-300/75"
-                      on:click={() => changeNode(w.object)}
-                      >{w.object.value.split(/\/|#/).at(-1)}</span
-                    >
-                  </summary>
-                  {#if nestLevel < maxNest}
-                    <svelte:self
-                      {...{
-                        currentNode: w.object,
-                        dataset,
-                        nestLevel: ++nestLevel,
-                      }}
-                    />
-                  {/if}
-                </details>
-              </span>
-            </span>
-            <select name="" id="">
-              <option value="node" default>Node</option>
-              {#each allClasses as quad}
-                <option value={quad.value.split(/\/|#/).at(-1)}
-                  >{quad.value.split(/\/|#/).at(-1)}</option
-                >
-              {/each}
-            </select>
-          </li>
+          {#if 
+          !w.predicate.value.includes("http://www.w3.org/1999/02/22-rdf-syntax-ns#type") && 
+          !w.predicate.value.includes("/md") && 
+          !w.predicate.value.includes("/mdChild")
+          }
+            <li class="my-0.5">
+              <div class="inline-block justify-between">
+                <span class="flex align-top">
+                  <span
+                    on:click={() => changeNode(w.predicate)}
+                    class={`px-1 mr-2 bg-sky-200 cursor-pointer before:content-["-"] after:content-["->"]`}
+                  >
+                    {w.predicate.value.split(/\/|#/).at(-1)}
+                  </span>
+                  <span>
+                    <details class="inline">
+                      <summary>
+                        <span
+                          class="cursor-pointer bg-green-300/75"
+                          on:click={() => changeNode(w.object)}
+                          >{w.object.value.split(/\/|#/).at(-1)}</span
+                        >
+                      </summary>
+                      {#if nestLevel < maxNest}
+                        <svelte:self
+                          {...{
+                            currentNode: w.object,
+                            dataset,
+                            nestLevel: ++nestLevel,
+                          }}
+                        />
+                      {/if}
+                    </details>
+                  </span>
+                </span>
+              </div>
+            </li>
+          {/if}
         {/each}
         <li class="flex ">
           <span class={`px-1 mr-2 ${"bg-gray-300"} cursor-pointer`}>

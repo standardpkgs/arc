@@ -12,7 +12,7 @@
   let currentNode = rdfs.Class;
   let classes, propertys;
   let favs = [""];
-  let graph = "harry potter";
+  let graph = "pkg";
 
   onMount(onGraphSelect);
 
@@ -29,8 +29,8 @@
     classes = [
       ...new Set(
         [...dataset]
-          .filter((quad) => quad.predicate.equals(rdf.type))
-          .map((quad) => quad.object.value)
+          .filter((quad) => quad?.predicate?.equals(rdf.type))
+          .map((quad) => quad?.object.value)
       ),
     ].map(node);
 

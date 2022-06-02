@@ -1,18 +1,15 @@
 import App from "./App.svelte";
 import "../css/index.css";
 import * as H from "./Helpers";
-// import "./Effects"
 import clownface from "clownface";
 import rext from "rdf-ext";
 import N3 from "n3";
 import namespace from "@rdfjs/namespace";
 import fetch from "@rdfjs/fetch";
-
 import { storeStream } from "rdf-store-stream";
 import rdfDereferencer from "rdf-dereference";
 import { Store } from "./rdfun/Store";
 import { literal } from "./rdfun/Datafactory";
-let hi;
 
 export const rdf = namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
 export const rdfs = namespace("http://www.w3.org/2000/01/rdf-schema#");
@@ -29,13 +26,8 @@ export const {
   quad: q,
   variable,
 } = N3.DataFactory;
-const a = rdf.type;
-localStorage.iri = 0;
 
-export let urlData;
-export let dataset;
-export let startNode;
-export let favorites;
+localStorage.iri = 0;
 let url;
 
 const app = new App({
@@ -44,24 +36,19 @@ const app = new App({
 });
 
 export function iri() {
-  return `node_${++localStorage.iri}`
+  return `node_${++localStorage.iri}`;
 }
 
 export function createNode(label, graph = x.Data) {
-  const s = node(iri())
-  return [
-    q(s, rdf.type, rdfs.Resource, graph),
-    q(s, rdf.label, label, graph)
-  ]
+  const s = node(iri());
+  return [q(s, rdf.type, x.Node, graph), q(s, rdfs.label, l(label), graph)];
 }
 export function createClass(label = "anon Class", g = x.Schema) {
-  const s = node(iri())
-  return [q(s, rdf.type, rdfs.Class, g),
-    q(s, rdf.label, l(label), g)
-  ];
+  const s = node(iri());
+  return [q(s, rdf.type, rdfs.Class, g), q(s, rdfs.label, l(label), g)];
 }
 export function createRelation(label = "anon Rel", g = x.Schema) {
-  const s = node(iri())
+  const s = node(iri());
   return [
     q(s, rdf.type, rdf.Property, g),
     q(s, rdfs.domain, rdfs.Resource, g),
@@ -88,21 +75,27 @@ export function relations(...args) {
   if (args[1]?.[0]?.length)
     return args[1].map((poArray) => relations(args[0], poArray));
   else if (args[1]?.length)
-    return args[1][1].map((oArray) =>
-      relations(args[0], args[1][0], oArray)
-    );
+    return args[1][1].map((oArray) => relations(args[0], args[1][0], oArray));
   else return addRelation(s, p, o);
 }
 
 export function mdChild(parent, block, string) {
   return [
     q(parent, x.mdChild, block, x.Markdown),
-    q(block, x.mdContent, literal(string), x.Markdown),
+    q(block, x.mdContent, l(string), x.Markdown),
     classify(x.Block, [block]),
   ].flat();
 }
 
 export async function changeGraph(graph) {
+  if (graph == "pkg") {
+    const dataset = new Store();
+
+    dataset.addQuads(createNode("Home"));
+    console.warn([...dataset]);
+    const startNode = [...dataset][0].subject;
+    return [dataset, startNode, [startNode]];
+  }
   if (graph == "harry potter") {
     const dataset = new Store();
     window.dataset = dataset;
@@ -317,7 +310,11 @@ export async function changeGraph(graph) {
       // markdown
       relations(Pizza, x.md, x.PizzaMD),
 
-      mdChild(x.PizzaMD, x.PizzaMD1, "Pizza is probably the most popular food in the world."),
+      mdChild(
+        x.PizzaMD,
+        x.PizzaMD1,
+        "Pizza is probably the most popular food in the world."
+      ),
       mdChild(x.PizzaMD, x.PizzaMD2, "famous Pizza variations:"),
       mdChild(x.PizzaMD2, x.PizzaMD21, "Hawai"),
       mdChild(x.PizzaMD21, x.PizzaMD211, "Toppings:"),
@@ -334,7 +331,6 @@ export async function changeGraph(graph) {
       mdChild(x.IceMd, x.IceMd1, "Most people like Ice Cream"),
       mdChild(x.IceMd, x.IceMd2, "variants:"),
       relations(x.IceMd2, x.mdChild, x.PizzaMD2112),
-
     ].flat(3);
 
     dataset.addQuads([types, triples, markdown].flat());

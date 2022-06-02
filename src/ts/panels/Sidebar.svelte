@@ -1,5 +1,4 @@
 <script>
-  import { color, rw } from "../Helpers";
 
   export let propertys;
   export let classes;
@@ -16,6 +15,7 @@
   <header>
     <label class="inline-block" for="graph-select">Graph: &nbsp;</label>
     <select name="graph-select" id="" bind:value={graph} on:change={onGraphSelect}>
+      <option value="pkg">pkg</option>
       <option value="harry potter">harry potter</option>
       <option value="rubenworks">rubenworks</option>
       <option value="+ enter url">+ enter url</option>
