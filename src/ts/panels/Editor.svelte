@@ -1,34 +1,15 @@
 <script>
-  import { color, rw } from "../Helpers";
-  import { marked } from "marked";
-  import {
-    classify,
-    createClass,
-    foaf,
-    node,
-    q,
-    rdf,
-    rdfs,
-    schema,
-    x,
-  } from "../main";
-  import { onMount } from "svelte";
   import MdChild from "../components/MdChild.svelte";
-  import RdfDereferencer from "rdf-dereference";
-  import { storeStream } from "rdf-store-stream";
   import Fieldset from "../components/Fieldset.svelte";
-  import App from "../App.svelte";
-  import { log } from "util";
-  import {} from "os";
   import Title from "../components/Title.svelte";
+  import { namedNode, quad } from "../rdfun/Datafactory";
+  import { rdf, x } from "../main";
+  import { createClass, getLabel, getLabelTriple } from "../RDFapi";
 
-  export let currentNode;
+  export let ciri;
   export let dataset;
-  export let nestLevel = 0;
-  export let changeNode;
+  let nestLevel = 0;
   let maxNest = 0;
-  let title;
-  let children = [];
   $: {
     maxNest = (() => {
       if ([...dataset]?.length > 500) return 1;
@@ -39,60 +20,41 @@
     })();
   }
 
-  let isProperty, isClass, isEntity;
-
-  let classes;
-  let allClasses;
-  let propertys;
   let relations = [];
-  let markdown = node("empty");
-  let subsAndObjs, propSubs, propObjs;
-  let classInstances;
+  let markdown = namedNode("empty");
 
-  title =
-    [...dataset?.match(currentNode, rdf.label, null)]?.[0]?.object.value ??
-    currentNode.value.split(/\/|#/).at(-1);
-  $: {
-    classes = [...dataset.match(currentNode, rdf.type, null)];
-    allClasses = [
-      ...new Set(
-        [...dataset.match(null, rdf.type, null)].map(
-          (quad) => quad.object.value
-        )
-      ),
-    ].map(node);
-    isClass = allClasses.some((cl) => cl.equals(currentNode));
-    classInstances = [
-      ...new Set(
-        [...dataset.match(null, rdf.type, currentNode)].map(
-          (quad) => quad.subject.value
-        )
-      ),
-    ].map(node);
-    propertys = [...dataset.match(currentNode, null, null)].filter(
-      (quad) => quad.object.termType == "Literal"
-    );
+  $: classes = [...dataset.match(ciri, rdf.type)];
+  $: allClasses = [
+    ...new Set(
+      [...dataset.match(null, rdf.type, null)].map((quad) => quad.object.value)
+    ),
+  ].map(namedNode);
+  $: isClass = allClasses.some((cl) => cl.equals(ciri));
+  $: classInstances = [
+    ...new Set(
+      [...dataset.match(null, rdf.type, ciri)].map((quad) => quad.subject.value)
+    ),
+  ].map(namedNode);
+  $: propertys = [...dataset.match(ciri, null, null)].filter(
+    (quad) => quad.object.termType == "Literal"
+  );
 
-    relations = [...dataset.match(currentNode, null, null)].filter(
-      (quad) => quad.object.termType == "NamedNode"
-    );
+  $: relations = [...dataset.match(ciri, null, null)].filter(
+    (quad) => quad.object.termType == "NamedNode"
+  );
 
-    markdown =
-      [...dataset.match(currentNode, x.md, null)]?.[0]?.object ?? node("test");
+  $: markdown =
+    [...dataset.match(ciri, x.md, null)]?.[0]?.object ?? namedNode("test");
 
-    subsAndObjs = [...dataset?.match(null, currentNode, null)];
-    isProperty = subsAndObjs?.length;
-    if (isProperty) {
-      propSubs = [
-        ...new Set(subsAndObjs.map((quad) => quad.subject.value)),
-      ].map(node);
-      propObjs = [...new Set(subsAndObjs.map((quad) => quad.object.value))].map(
-        node
-      );
-    }
-    children = [...dataset.match(currentNode, x.mdChild, null)];
-    // console.error(children)
-  }
+  $: subsAndObjs = [...dataset?.match(null, ciri, null)];
+  $: isProperty = subsAndObjs?.length;
+  $: children = [...dataset.match(ciri, x.mdChild, null)];
+  $: propSubs = isProperty
+    ? [...new Set(subsAndObjs.map((quad) => quad.subject.value))].map(namedNode)
+    : null;
+  $: propObjs = isProperty
+    ? [...new Set(subsAndObjs.map((quad) => quad.object.value))].map(namedNode)
+    : null;
 </script>
 
 <main
@@ -102,32 +64,27 @@
     class="h-full px-8 {nestLevel == 0 ? 'py-5' : 'py-2'} flex flex-col gap-2"
   >
     {#if nestLevel == 0}
-      <header class="border-2 border-neutral-700 rounded-lg py-2 px-5">
-        <h2 class="text-6xl ">
-          <Title bind:title />
-        </h2>
-        <div class="text-gray-400">
-          {currentNode.value}
-        </div>
-      </header>
+      <h2 class="text-6xl">
+        <Title bind:ciri />
+      </h2>
     {/if}
     <ul class="px-0 flex justify-center flex-wrap gap-1">
       {#each classes as w, i}
         <li
-          on:click={() => changeNode(w.object)}
+          on:click={() => (ciri = w.object)}
           class={`rounded-xl px-2 bg-red-300 cursor-pointer inline-block shadow-md capitalize`}
         >
-          {w.object.value.split(/\/|#/).at(-1)}
+          {getLabel(w.object)}
         </li>
       {/each}
       <li
         class={`rounded-xl px-2 ${"bg-gray-300"} cursor-pointer inline-block shadow-md capitalize`}
         on:click={() => {
-          const classQuads = createClass();
-          const classNode = classQuads[0].subject;
-          dataset.addQuads(classQuads);
-          dataset.addQuads([q(currentNode, rdf.type, classNode, x.Data)]);
-          changeNode(currentNode);
+          // TODO: check if class exists
+          const label = prompt("label of the new Class?");
+          const classIRI = createClass(label);
+          dataset.addQuads([quad(ciri, rdf.type, classIRI, x.Data)]);
+          ciri = ciri;
         }}
       >
         + new Class
@@ -139,7 +96,7 @@
           <li class="flex justify-between">
             <span>
               <span
-                on:click={() => changeNode(w.predicate)}
+                on:click={() => (ciri = w.predicate)}
                 class={`px-1 mr-2 bg-sky-200 cursor-pointer before:content-["-"] after:content-[">"]`}
               >
                 {w.predicate.value.split(/\/|#/).at(-1)}
@@ -153,26 +110,17 @@
             </select>
           </li>
         {/each}
-        <li class="flex ">
-          <span class={`px-1 mr-2 ${"bg-gray-300"} cursor-pointer`}>
-            + new Property
-          </span>
-        </li>
       </ul>
     </Fieldset>
     <Fieldset legend="Relations">
       <ul class="mx-0.5 list-inside list-disc">
         {#each relations as w, i}
-          {#if 
-          !w.predicate.value.includes("http://www.w3.org/1999/02/22-rdf-syntax-ns#type") && 
-          !w.predicate.value.includes("/md") && 
-          !w.predicate.value.includes("/mdChild")
-          }
+          {#if !w.predicate.value.includes("http://www.w3.org/1999/02/22-rdf-syntax-ns#type") && !w.predicate.value.includes("/md") && !w.predicate.value.includes("/mdChild")}
             <li class="my-0.5">
               <div class="inline-block justify-between">
                 <span class="flex align-top">
                   <span
-                    on:click={() => changeNode(w.predicate)}
+                    on:click={() => (ciri = w.predicate)}
                     class={`px-1 mr-2 bg-sky-200 cursor-pointer before:content-["-"] after:content-["->"]`}
                   >
                     {w.predicate.value.split(/\/|#/).at(-1)}
@@ -182,7 +130,7 @@
                       <summary>
                         <span
                           class="cursor-pointer bg-green-300/75"
-                          on:click={() => changeNode(w.object)}
+                          on:click={() => (ciri = w.object)}
                           >{w.object.value.split(/\/|#/).at(-1)}</span
                         >
                       </summary>
@@ -202,11 +150,6 @@
             </li>
           {/if}
         {/each}
-        <li class="flex ">
-          <span class={`px-1 mr-2 ${"bg-gray-300"} cursor-pointer`}>
-            + new Relation
-          </span>
-        </li>
       </ul>
     </Fieldset>
     {#if isClass}
@@ -218,7 +161,7 @@
                 <summary>
                   <span
                     class="cursor-pointer bg-green-300/75"
-                    on:click={() => changeNode(instance)}
+                    on:click={() => (ciri = instance)}
                     >{instance.value.split(/\//).at(-1)}</span
                   >
                 </summary>
@@ -243,19 +186,19 @@
           {#each subsAndObjs as quad}
             <li>
               <span
-                on:click={() => changeNode(quad.subject)}
+                on:click={() => (ciri = quad.subject)}
                 class={`px-1 mr-2 cursor-pointer bg-green-300/75`}
               >
                 {quad.subject.value.split(/\//).at(-1)}
               </span>
               <span
-                on:click={() => changeNode(quad.predicate)}
+                on:click={() => (ciri = quad.predicate)}
                 class={`px-1 mr-2 bg-sky-200 cursor-pointer before:content-["-"] after:content-["->"]`}
               >
                 {quad.predicate.value.split(/\//).at(-1)}
               </span>
               <span
-                on:click={() => changeNode(quad.object)}
+                on:click={() => (ciri = quad.object)}
                 class={`px-1 mr-2 cursor-pointer bg-green-300/75`}
               >
                 {quad.object.value.split(/\//).at(-1)}
@@ -269,7 +212,7 @@
           {#each propSubs as w}
             <li>
               <span
-                on:click={() => changeNode(w)}
+                on:click={() => (ciri = w)}
                 class={`px-1 mr-2 cursor-pointer bg-green-300/75`}
               >
                 {w.value.split(/\//).at(-1)}
@@ -283,7 +226,7 @@
           {#each propObjs as w}
             <li>
               <span
-                on:click={() => changeNode(w)}
+                on:click={() => (ciri = w)}
                 class={`px-1 mr-2 cursor-pointer bg-green-300/75`}
               >
                 {w.value.split(/\//).at(-1)}
@@ -297,12 +240,12 @@
       <Fieldset legend="Notes">
         <!-- {#each children as childQuad} -->
 
-        <MdChild {...{ dataset, markdown: currentNode, changeNode }} />
+        <MdChild bind:ciri {...{ dataset, markdown: ciri }} />
         <!-- {/each} -->
       </Fieldset>
     {:else}
       <Fieldset legend="Notes">
-        <MdChild {...{ dataset, markdown, changeNode }} />
+        <MdChild bind:ciri {...{ dataset, markdown }} />
       </Fieldset>
     {/if}
   </div>
