@@ -5,10 +5,10 @@
   "type": "module",
   "source": "index.html",
   "distDir": "docs/",
-  "publicUrl": "https://omeslearns.github.io/arc/",
+  "publicUrl": "https://standardpkgs.github.io/arc/",
   "scripts": {
     "go": "parcel --open chrome",
-    "build": "parcel build --dist-dir docs/ --public-url https://omeslearns.github.io/arc/",
+    "build": "parcel build --dist-dir docs/ --public-url https://standardpkgs.github.io/arc/",
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "packageManager": "yarn@3.2.1",
